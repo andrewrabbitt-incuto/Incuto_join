@@ -278,7 +278,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
             <div className={cn(
               'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all',
               i < currentSectionIdx ? 'text-white' : i === currentSectionIdx ? 'text-white ring-4 ring-offset-2' : 'bg-gray-100 text-gray-400'
-            )} style={i <= currentSectionIdx ? { backgroundColor: primaryColor, ringColor: `${primaryColor}40` } : {}}>
+            )} style={i <= currentSectionIdx ? { backgroundColor: primaryColor, '--tw-ring-color': `${primaryColor}40` } as React.CSSProperties : {}}>
               {i < currentSectionIdx ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
             </div>
             {i < visibleSections.length - 1 && (

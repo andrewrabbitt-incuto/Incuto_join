@@ -189,7 +189,7 @@ export function FieldRenderer({ field, value, onChange, error, formData, brandin
             <div className="relative mt-0.5">
               <input type="checkbox" className="sr-only" checked={!!value} onChange={e => onChange(e.target.checked)} />
               <div className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors" style={{ borderColor: value ? branding.primaryColor : '#D1D5DB', backgroundColor: value ? branding.primaryColor : 'transparent' }}>
-                {value && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                {!!value && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
             </div>
             <span className="text-sm text-gray-700 leading-relaxed">{field.placeholder || field.label}</span>

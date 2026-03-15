@@ -22,7 +22,7 @@ function DraggablePaletteField({ type, label, icon, description }: PaletteFieldP
     data: { type: 'PALETTE_ITEM', fieldType: type },
   })
 
-  const IconComponent = (Icons as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>)[icon]
+  const IconComponent = (Icons as unknown as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>)[icon]
 
   return (
     <div
