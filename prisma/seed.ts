@@ -91,7 +91,7 @@ async function main() {
   console.log('Seeding complete!')
   console.log('\n=== DEMO LOGIN ===')
   console.log('URL: http://localhost:3000/login')
-  console.log('Tenant Slug: demo-credit-union')
+  console.log('Tenant Identifier: demo-credit-union')
   console.log('Email: admin@demo-cu.co.uk')
   console.log('Password: demo')
   console.log('==================\n')

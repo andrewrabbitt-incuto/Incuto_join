@@ -88,7 +88,7 @@ export default function NewFormPage() {
                 />
               </div>
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="slug">URL Slug *</Label>
+                <Label htmlFor="slug">URL Identifier *</Label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500">/join/</span>
                   <Input

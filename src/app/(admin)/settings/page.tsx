@@ -82,7 +82,7 @@ export default function SettingsPage() {
                 <Input value={settings.name} onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
               </div>
               <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
-                <strong>Tenant Slug:</strong> {session?.user?.tenantSlug}
+                <strong>Tenant Identifier:</strong> {session?.user?.tenantSlug}
                 <br />
                 <span className="text-xs">This is used in the login URL and cannot be changed.</span>
               </div>

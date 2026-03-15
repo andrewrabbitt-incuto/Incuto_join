@@ -71,7 +71,7 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="tenantSlug">Credit Union Slug</Label>
+                <Label htmlFor="tenantSlug">Credit Union Identifier</Label>
                 <Input
                   id="tenantSlug"
                   placeholder="e.g. my-credit-union"
