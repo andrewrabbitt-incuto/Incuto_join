@@ -27,10 +27,10 @@ async function main() {
   console.log('Created tenant:', tenant.slug)
 
   // Create admin user
-  const hashedPassword = await bcrypt.hash('demo123', 10)
+  const hashedPassword = await bcrypt.hash('demo', 10)
   const user = await prisma.user.upsert({
     where: { tenantId_email: { tenantId: tenant.id, email: 'admin@demo-cu.co.uk' } },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       tenantId: tenant.id,
       email: 'admin@demo-cu.co.uk',
@@ -93,7 +93,7 @@ async function main() {
   console.log('URL: http://localhost:3000/login')
   console.log('Tenant Slug: demo-credit-union')
   console.log('Email: admin@demo-cu.co.uk')
-  console.log('Password: (any password in demo mode)')
+  console.log('Password: demo')
   console.log('==================\n')
 }
 
