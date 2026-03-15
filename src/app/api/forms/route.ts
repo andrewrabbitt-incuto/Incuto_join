@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
                 },
                 ...(requireCommonBond ? [{
                   fieldKey: 'common_bond',
-                  fieldType: 'COMMON_BOND_SELECTOR',
+                  fieldType: 'COMMON_BOND_SELECTOR' as const,
                   label: 'Confirm your eligibility',
                   helpText: 'You must meet the common bond requirements to join',
                   required: true,
