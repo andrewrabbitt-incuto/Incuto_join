@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getIncutoClient } from '@/lib/incuto'
 
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     where: { id: applicationId },
     data: {
       idCheckStatus: idCheckResult.status as 'PASSED' | 'FAILED' | 'REQUIRES_MORE_INFO',
-      idCheckData: idCheckResult as unknown as Record<string, unknown>,
+      idCheckData: idCheckResult as unknown as Prisma.InputJsonValue,
       idCheckAttempts: { increment: 1 },
       status: newStatus,
       ...(idCheckResult.status === 'PASSED' && {
