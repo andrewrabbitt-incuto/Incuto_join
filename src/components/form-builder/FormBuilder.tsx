@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import {
   DndContext, DragEndEvent, DragStartEvent, DragOverEvent,
-  PointerSensor, useSensor, useSensors, DragOverlay,
+  PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay,
   closestCenter
 } from '@dnd-kit/core'
 import {
@@ -39,7 +39,8 @@ export function FormBuilder({ form: initialForm }: FormBuilderProps) {
   const { toast } = useToast()
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   )
 
   // Get the selected field
