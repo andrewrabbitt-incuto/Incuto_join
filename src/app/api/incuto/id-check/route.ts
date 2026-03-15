@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         data: {
           incutoMemberId: incuRes.memberId,
           incutoSubmittedAt: new Date(),
-          incutoResponse: incuRes as unknown as Record<string, unknown>,
+          incutoResponse: incuRes as unknown as Prisma.InputJsonValue,
         },
       })
 
