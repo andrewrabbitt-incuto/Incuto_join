@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getIncutoClient } from '@/lib/incuto'
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           completedAt: new Date(),
           incutoMemberId: memberId,
           incutoSubmittedAt: new Date(),
-          incutoResponse: result as unknown as Record<string, unknown>,
+          incutoResponse: result as unknown as Prisma.InputJsonValue,
         },
       })
     } catch (err) {
