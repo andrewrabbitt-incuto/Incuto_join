@@ -234,21 +234,21 @@ export async function POST(req: NextRequest) {
               create: [
                 {
                   fieldKey: 'loan_amount',
-                  fieldType: 'LOAN_AMOUNT',
+                  fieldType: 'LOAN_AMOUNT' as const,
                   label: 'How much would you like to borrow?',
                   required: true,
                   order: 0,
-                  width: 'FULL',
+                  width: 'FULL' as const,
                   isSystemField: false,
                   incutoFieldKey: 'loanAmount',
                 },
                 {
                   fieldKey: 'loan_term',
-                  fieldType: 'LOAN_TERM',
+                  fieldType: 'LOAN_TERM' as const,
                   label: 'Over how many months?',
                   required: true,
                   order: 1,
-                  width: 'HALF',
+                  width: 'HALF' as const,
                   isSystemField: false,
                   incutoFieldKey: 'loanTerm',
                   options: [
@@ -263,11 +263,11 @@ export async function POST(req: NextRequest) {
                 },
                 {
                   fieldKey: 'loan_purpose',
-                  fieldType: 'LOAN_PURPOSE',
+                  fieldType: 'LOAN_PURPOSE' as const,
                   label: 'What is the loan for?',
                   required: true,
                   order: 2,
-                  width: 'HALF',
+                  width: 'HALF' as const,
                   isSystemField: false,
                   incutoFieldKey: 'loanPurpose',
                   options: [
