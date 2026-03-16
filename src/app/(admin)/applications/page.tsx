@@ -15,7 +15,7 @@ export default async function ApplicationsPage() {
     where: { tenantId: session.user.tenantId },
     include: {
       form: true,
-      campaign: true,
+      landingPage: true,
     },
     orderBy: { startedAt: 'desc' },
     take: 100,
@@ -75,7 +75,7 @@ export default async function ApplicationsPage() {
                     <th className="text-left pb-3 pr-4">Member Type</th>
                     <th className="text-left pb-3 pr-4">Products</th>
                     <th className="text-left pb-3 pr-4">Status</th>
-                    <th className="text-left pb-3 pr-4">Campaign</th>
+                    <th className="text-left pb-3 pr-4">Landing Page</th>
                     <th className="text-left pb-3 pr-4">ID Check</th>
                     <th className="text-left pb-3">Incuto ID</th>
                   </tr>
@@ -95,7 +95,7 @@ export default async function ApplicationsPage() {
                           </div>
                         </td>
                         <td className="py-3 pr-4"><AppStatusBadge status={app.status} /></td>
-                        <td className="py-3 pr-4 text-gray-500">{app.campaign?.name || '—'}</td>
+                        <td className="py-3 pr-4 text-gray-500">{app.landingPage?.name || '—'}</td>
                         <td className="py-3 pr-4">
                           {app.idCheckStatus ? <IdBadge status={app.idCheckStatus} /> : <span className="text-gray-300">—</span>}
                         </td>

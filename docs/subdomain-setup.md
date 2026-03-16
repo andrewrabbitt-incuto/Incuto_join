@@ -3,13 +3,13 @@
 Each credit union gets its own subdomain on `cuaccount.com`. Their forms are served at:
 
 ```
-https://[credit-union-slug].cuaccount.com/join/[form-slug]
+https://[credit-union-slug].cuaccount.com/form/[form-slug]
 ```
 
 For example, a credit union with slug `riverside` and a form with slug `standard` is at:
 
 ```
-https://riverside.cuaccount.com/join/standard
+https://riverside.cuaccount.com/form/standard
 ```
 
 ---
@@ -20,7 +20,7 @@ https://riverside.cuaccount.com/join/standard
 2. A **wildcard DNS record** (`*.cuaccount.com`) points all subdomains to the Railway service.
 3. A **wildcard custom domain** is configured in Railway to accept all `*.cuaccount.com` requests.
 4. The **Next.js middleware** (`src/middleware.ts`) reads the subdomain from the `Host` header and sets an `x-tenant-slug` header on the request.
-5. The `/join/[slug]` page reads that header and scopes the form lookup to that credit union only.
+5. The `/form/[slug]` page reads that header and scopes the form lookup to that credit union only.
 
 The credit union's **slug** (set when the tenant is created in the admin) is what becomes the subdomain. For example, slug `riverside-credit-union` → `riverside-credit-union.cuaccount.com`.
 
@@ -99,7 +99,7 @@ Once the infrastructure is set up, adding a new credit union is instant — no D
 
 3. The form is immediately live at:
    ```
-   https://[tenant-slug].cuaccount.com/join/[form-slug]
+   https://[tenant-slug].cuaccount.com/form/[form-slug]
    ```
 
 4. Share the URL with the credit union. No further infrastructure work is needed.
@@ -110,10 +110,10 @@ Once the infrastructure is set up, adding a new credit union is instant — no D
 
 | Purpose | URL Pattern | Example |
 |---|---|---|
-| Standard membership form | `[slug].cuaccount.com/join/standard` | `riverside.cuaccount.com/join/standard` |
-| Savings-only form | `[slug].cuaccount.com/join/savings-only` | `riverside.cuaccount.com/join/savings-only` |
-| ISA form | `[slug].cuaccount.com/join/isa` | `riverside.cuaccount.com/join/isa` |
-| Campaign-specific form | `[slug].cuaccount.com/join/[campaign-slug]?campaign=CODE` | `riverside.cuaccount.com/join/spring-offer?campaign=SPRING24` |
+| Standard membership form | `[slug].cuaccount.com/form/standard` | `riverside.cuaccount.com/form/standard` |
+| Savings-only form | `[slug].cuaccount.com/form/savings-only` | `riverside.cuaccount.com/form/savings-only` |
+| ISA form | `[slug].cuaccount.com/form/isa` | `riverside.cuaccount.com/form/isa` |
+| Campaign-specific form | `[slug].cuaccount.com/form/[campaign-slug]?campaign=CODE` | `riverside.cuaccount.com/form/spring-offer?campaign=SPRING24` |
 | Admin panel | `app.cuaccount.com` (or Railway URL) | — |
 
 ---
@@ -128,7 +128,7 @@ Add to `/etc/hosts` (Mac/Linux) or `C:\Windows\System32\drivers\etc\hosts` (Wind
 ```
 127.0.0.1  riverside.localhost
 ```
-Then visit `http://riverside.localhost:3000/join/standard`.
+Then visit `http://riverside.localhost:3000/form/standard`.
 
 Note: You also need to set `BASE_DOMAIN=localhost` in your local `.env`.
 

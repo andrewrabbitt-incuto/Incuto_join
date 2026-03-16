@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  LayoutDashboard, FileText, BarChart3, Megaphone,
-  Users, Settings, Palette, Shield, LogOut,
+  LayoutDashboard, FileText, BarChart3,
+  Users, Settings, Palette, LogOut,
   Building2, ChevronRight, Globe
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -15,8 +15,8 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/forms', icon: FileText, label: 'Forms' },
   { href: '/applications', icon: Users, label: 'Applications' },
-  { href: '/campaigns', icon: Megaphone, label: 'Campaigns' },
-  { href: '/common-bonds', icon: Globe, label: 'Common Bonds' },
+  { href: '/landing-pages', icon: Globe, label: 'Landing Pages' },
+  { href: '/common-bonds', icon: BarChart3, label: 'Common Bonds' },
   { href: '/branding', icon: Palette, label: 'Branding' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ]

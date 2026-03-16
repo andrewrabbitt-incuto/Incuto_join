@@ -260,7 +260,7 @@ export function FormBuilder({ form: initialForm }: FormBuilderProps) {
       })
       if (!res.ok) throw new Error()
       setForm(f => ({ ...f, status: 'PUBLISHED' }))
-      toast({ title: 'Form published!', description: `Available at /join/${form.slug}`, variant: 'default' })
+      toast({ title: 'Form published!', description: `Available at /form/${form.slug}`, variant: 'default' })
     } catch {
       toast({ title: 'Publish failed', variant: 'destructive' })
     } finally {
@@ -282,7 +282,7 @@ export function FormBuilder({ form: initialForm }: FormBuilderProps) {
               {form.status}
             </Badge>
           </div>
-          <p className="text-xs text-gray-400">/join/{form.slug}</p>
+          <p className="text-xs text-gray-400">/form/{form.slug}</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -304,7 +304,7 @@ export function FormBuilder({ form: initialForm }: FormBuilderProps) {
               Publish
             </Button>
           ) : (
-            <Link href={`/join/${form.slug}`} target="_blank">
+            <Link href={`/form/${form.slug}`} target="_blank">
               <Button size="sm" variant="outline">
                 <Eye className="w-4 h-4 mr-1" /> View Live
               </Button>

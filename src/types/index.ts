@@ -149,7 +149,7 @@ export interface FormAnalytics {
   dropoutBySectionData: Record<string, number>
   byProduct: { savings: number; loan: number; both: number }
   byMemberType: { individual: number; corporate: number; child: number }
-  byCampaign: Record<string, number>
+  byLandingPage: Record<string, number>
   recentApplications: ApplicationSummary[]
   trend: TrendPoint[]
 }
@@ -161,7 +161,7 @@ export interface ApplicationSummary {
   products: unknown
   startedAt: string
   completedAt?: string
-  campaignName?: string
+  landingPageName?: string
 }
 
 export interface TrendPoint {

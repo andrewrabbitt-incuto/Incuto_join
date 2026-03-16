@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
@@ -8,14 +9,13 @@ export async function POST(req: NextRequest) {
   const form = await prisma.form.findFirst({ where: { id: formId } })
   if (!form) return NextResponse.json({ error: 'Form not found' }, { status: 404 })
 
-  // Resolve campaign if code provided
-  let campaignId: string | undefined
+  // Resolve landing page by tracking code if provided
+  let landingPageId: string | undefined
   if (campaignCode) {
-    const campaign = await prisma.campaign.findFirst({ where: { trackingCode: campaignCode } })
-    if (campaign) campaignId = campaign.id
+    const lp = await prisma.landingPage.findFirst({ where: { trackingCode: campaignCode } })
+    if (lp) landingPageId = lp.id
   }
 
-  // Extract UTM params from referrer
   const userAgent = req.headers.get('user-agent') || undefined
   const referrer = req.headers.get('referer') || undefined
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       tenantId: form.tenantId,
       formId,
       sessionId,
-      campaignId,
+      landingPageId,
       status: 'STARTED',
       memberType: 'INDIVIDUAL',
       products: {},
@@ -33,13 +33,8 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // Track event
   await prisma.applicationEvent.create({
-    data: {
-      applicationId: application.id,
-      eventType: 'form_start',
-      sectionIndex: 0,
-    },
+    data: { applicationId: application.id, eventType: 'form_start', sectionIndex: 0 },
   })
 
   return NextResponse.json(application)
@@ -50,11 +45,32 @@ export async function GET(req: NextRequest) {
   const tenantId = searchParams.get('tenantId')
   if (!tenantId) return NextResponse.json({ error: 'tenantId required' }, { status: 400 })
 
+  const search = searchParams.get('search')?.trim() || ''
+
+  const where: Prisma.ApplicationWhereInput = { tenantId }
+
+  if (search) {
+    // Search across all indexed field values for this tenant's applications
+    where.fieldValues = {
+      some: {
+        stringValue: { contains: search, mode: 'insensitive' }
+      }
+    }
+  }
+
   const applications = await prisma.application.findMany({
-    where: { tenantId },
-    include: { form: true, campaign: true },
+    where,
+    include: {
+      form: true,
+      landingPage: true,
+      // Return matching field values when searching so the UI can highlight them
+      fieldValues: search
+        ? { where: { stringValue: { contains: search, mode: 'insensitive' } } }
+        : false,
+    },
     orderBy: { startedAt: 'desc' },
     take: 100,
   })
+
   return NextResponse.json(applications)
 }

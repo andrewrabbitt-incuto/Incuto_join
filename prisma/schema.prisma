@@ -42,7 +42,7 @@ model Tenant {
   users        User[]
   forms        Form[]
   commonBonds  CommonBond[]
-  campaigns    Campaign[]
+  landingPages LandingPage[]
   applications Application[]
 
   @@map("tenants")
@@ -131,8 +131,8 @@ model Form {
   requireCommonBond Boolean @default(true)
 
   // Form structure
-  sections    FormSection[]
-  campaigns   CampaignForm[]
+  sections     FormSection[]
+  landingPages LandingPageForm[]
   applications Application[]
 
   publishedAt DateTime?
@@ -156,7 +156,7 @@ enum FormType {
   ISA           // ISA product
   CORPORATE     // Business member
   CHILDREN      // Junior member
-  CAMPAIGN      // Campaign-specific form
+  CAMPAIGN      // Landing page-specific form
 }
 
 model FormSection {
@@ -199,8 +199,10 @@ model FormField {
   // Options (for select/radio/checkbox fields)
   options     Json?  // array of { label, value }
 
-  // System field mapping
-  incutoFieldKey  String?  // maps to incuto API field
+  // Incuto field mapping — maps this field's collected value to an Incuto API field
+  // e.g. "firstName", "address.line1", "employment.status"
+  // Fields without a mapping go to customFields in the Incuto payload
+  incutoFieldKey  String?
   isSystemField   Boolean  @default(false)  // mandatory field, can't be removed
   systemFieldName String?  // e.g. 'first_name', 'last_name', 'dob'
 
@@ -256,10 +258,13 @@ enum FieldWidth {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CAMPAIGNS
+// LANDING PAGES
+// Previously known as Campaigns — renamed to avoid confusion with
+// Incuto Hub marketing campaigns. Landing pages are used to track
+// traffic from marketing channels and link forms to specific URLs.
 // ─────────────────────────────────────────────────────────────
 
-model Campaign {
+model LandingPage {
   id          String         @id @default(cuid())
   tenantId    String
   tenant      Tenant         @relation(fields: [tenantId], references: [id])
@@ -276,20 +281,20 @@ model Campaign {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  forms        CampaignForm[]
+  forms        LandingPageForm[]
   applications Application[]
 
   @@map("campaigns")
 }
 
-model CampaignForm {
-  id         String   @id @default(cuid())
-  campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id])
-  formId     String
-  form       Form     @relation(fields: [formId], references: [id])
+model LandingPageForm {
+  id            String      @id @default(cuid())
+  landingPageId String      @map("campaignId")
+  landingPage   LandingPage @relation(fields: [landingPageId], references: [id])
+  formId        String
+  form          Form        @relation(fields: [formId], references: [id])
 
-  @@unique([campaignId, formId])
+  @@unique([landingPageId, formId])
   @@map("campaign_forms")
 }
 
@@ -298,21 +303,24 @@ model CampaignForm {
 // ─────────────────────────────────────────────────────────────
 
 model Application {
-  id         String            @id @default(cuid())
-  tenantId   String
-  tenant     Tenant            @relation(fields: [tenantId], references: [id])
-  formId     String
-  form       Form              @relation(fields: [formId], references: [id])
-  campaignId String?
-  campaign   Campaign?         @relation(fields: [campaignId], references: [id])
+  id           String            @id @default(cuid())
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  formId       String
+  form         Form              @relation(fields: [formId], references: [id])
+  landingPageId String?          @map("campaignId")
+  landingPage  LandingPage?      @relation(fields: [landingPageId], references: [id])
 
-  sessionId   String           @unique
+  sessionId   String            @unique
   status      ApplicationStatus @default(STARTED)
   memberType  MemberType        @default(INDIVIDUAL)
   products    Json              // { savings: bool, loan: bool, savingsType: string }
 
-  // Submitted data (encrypted in production)
+  // Submitted form data (full JSON blob, preserved for audit)
   formData    Json?
+
+  // Searchable per-field values — populated at submission time
+  fieldValues ApplicationFieldValue[]
 
   // ID verification
   idCheckStatus    IdCheckStatus?
@@ -350,6 +358,28 @@ model Application {
   events ApplicationEvent[]
 
   @@map("applications")
+}
+
+// Searchable per-field store. One row per submitted field value.
+// Enables full-text search across all applicants without scanning the formData JSON blob.
+model ApplicationFieldValue {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  fieldKey      String   // e.g. "first_name" — matches FormField.fieldKey
+  fieldLabel    String   // e.g. "First Name" — denormalised for display
+  stringValue   String?  // normalised to string for search/filtering
+  rawValue      Json?    // original value as submitted (may be object/array/bool)
+
+  // Denormalised from FormField.incutoFieldKey — tells us which Incuto field this maps to.
+  // NULL means it is a custom field with no standard Incuto mapping.
+  incutoFieldKey String?
+
+  @@index([applicationId])
+  @@index([fieldKey])
+  @@index([stringValue])
+  @@map("application_field_values")
 }
 
 enum ApplicationStatus {
@@ -430,8 +460,8 @@ model FormAnalyticsSnapshot {
   corporateCount  Int @default(0)
   childCount      Int @default(0)
 
-  // By campaign
-  campaignData Json?
+  // By landing page
+  landingPageData Json? @map("campaignData")
 
   createdAt DateTime @default(now())
 
