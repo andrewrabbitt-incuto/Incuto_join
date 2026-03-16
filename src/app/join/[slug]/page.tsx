@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { FormRenderer } from '@/components/form-renderer/FormRenderer'
@@ -8,24 +9,45 @@ interface PageProps {
   searchParams: { campaign?: string; utm_source?: string; utm_medium?: string; utm_campaign?: string }
 }
 
-export default async function JoinFormPage({ params, searchParams }: PageProps) {
-  // Find form by slug (search all tenants, but form must be PUBLISHED)
-  const form = await prisma.form.findFirst({
-    where: { slug: params.slug, status: 'PUBLISHED' },
-    include: {
-      tenant: true,
-      sections: {
-        orderBy: { order: 'asc' },
-        include: { fields: { orderBy: { order: 'asc' } } }
-      }
-    }
-  })
+// Shared query shape used in both the page and generateMetadata
+const formInclude = {
+  tenant: true,
+  sections: {
+    orderBy: { order: 'asc' as const },
+    include: { fields: { orderBy: { order: 'asc' as const } } }
+  }
+}
 
+async function findForm(slug: string) {
+  const headersList = headers()
+  const tenantSlug = headersList.get('x-tenant-slug')
+
+  if (tenantSlug) {
+    // Subdomain request: resolve the tenant first, then scope the form lookup.
+    // This prevents one credit union from accidentally serving another's forms.
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } })
+    if (!tenant) return null
+
+    return prisma.form.findFirst({
+      where: { tenantId: tenant.id, slug, status: 'PUBLISHED' },
+      include: formInclude
+    })
+  }
+
+  // Fallback for direct Railway domain access (no subdomain context)
+  return prisma.form.findFirst({
+    where: { slug, status: 'PUBLISHED' },
+    include: formInclude
+  })
+}
+
+export default async function JoinFormPage({ params, searchParams }: PageProps) {
+  const form = await findForm(params.slug)
   if (!form) notFound()
 
   const tenant = form.tenant
 
-  // Build branding from tenant + any form overrides
+  // Build branding from tenant defaults + any form-level overrides
   const baseBranding: FormBranding = {
     primaryColor: tenant.primaryColor,
     secondaryColor: tenant.secondaryColor,
@@ -100,10 +122,7 @@ export default async function JoinFormPage({ params, searchParams }: PageProps) 
 }
 
 export async function generateMetadata({ params }: PageProps) {
-  const form = await prisma.form.findFirst({
-    where: { slug: params.slug, status: 'PUBLISHED' },
-    include: { tenant: true }
-  })
+  const form = await findForm(params.slug)
   if (!form) return { title: 'Not Found' }
   return {
     title: `${form.name} — ${form.tenant.name}`,
