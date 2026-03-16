@@ -22,7 +22,7 @@ export default async function FormAnalyticsPage({ params }: { params: { id: stri
   // Fetch applications for this form
   const applications = await prisma.application.findMany({
     where: { formId: params.id },
-    include: { campaign: true },
+    include: { landingPage: true },
     orderBy: { startedAt: 'desc' },
   })
 
@@ -156,7 +156,7 @@ export default async function FormAnalyticsPage({ params }: { params: { id: stri
                       <td className="py-2 pr-4 text-gray-600">{formatDate(app.startedAt)}</td>
                       <td className="py-2 pr-4"><AppStatusBadge status={app.status} /></td>
                       <td className="py-2 pr-4 text-gray-600">{app.memberType}</td>
-                      <td className="py-2 pr-4 text-gray-600">{app.campaign?.name || '—'}</td>
+                      <td className="py-2 pr-4 text-gray-600">{app.landingPage?.name || '—'}</td>
                       <td className="py-2 text-gray-600">{app.completedAt ? formatDate(app.completedAt) : '—'}</td>
                     </tr>
                   ))}
