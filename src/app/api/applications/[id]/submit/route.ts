@@ -125,7 +125,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           postcode: address.postcode || '',
           country: 'GB',
         },
-        employment: Object.keys(employment).length ? employment : undefined,
+        employment: Object.keys(employment).length ? employment as { status: string; employer?: string; occupation?: string; annualIncome?: number } : undefined,
         products: { savings: products.savings, savingsType: products.savingsType, loan: products.loan },
         marketingConsent: !!formData.marketing_consent,
         customFields: Object.keys(customFields).length ? customFields : undefined,

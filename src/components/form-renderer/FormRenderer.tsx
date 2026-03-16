@@ -342,7 +342,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
             </div>
             {/* Show trigger indicator on sections that have triggers */}
             {s.triggers?.length ? (
-              <Zap className="w-3 h-3 text-amber-400" title="Has eligibility check" />
+              <Zap className="w-3 h-3 text-amber-400" aria-label="Has eligibility check" />
             ) : null}
             {i < visibleSections.length - 1 && (
               <div className={cn('w-8 h-0.5', i < currentSectionIdx ? 'bg-green-400' : 'bg-gray-200')} />
