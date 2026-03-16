@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import {
   FileText, Users, TrendingUp, CheckCircle2,
-  Plus, BarChart3, Megaphone, ArrowRight
+  Plus, BarChart3, Globe, ArrowRight
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 async function getDashboardData(tenantId: string) {
-  const [forms, applications, campaigns] = await Promise.all([
+  const [forms, applications, landingPages] = await Promise.all([
     prisma.form.findMany({
       where: { tenantId },
       include: { _count: { select: { applications: true } } },
@@ -24,19 +24,19 @@ async function getDashboardData(tenantId: string) {
       where: { tenantId },
       _count: { _all: true },
     }),
-    prisma.campaign.findMany({
+    prisma.landingPage.findMany({
       where: { tenantId, isActive: true },
       take: 3,
     }),
   ])
-  return { forms, applications, campaigns }
+  return { forms, applications, landingPages }
 }
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session) return null
 
-  const { forms, applications, campaigns } = await getDashboardData(session.user.tenantId)
+  const { forms, applications, landingPages } = await getDashboardData(session.user.tenantId)
 
   const totalApps = applications.reduce((sum, a) => sum + a._count._all, 0)
   const completedApps = applications.find(a => a.status === 'COMPLETED')?._count._all || 0
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
             <CardContent className="space-y-2">
               {[
                 { href: '/forms/new', icon: FileText, label: 'Create new form' },
-                { href: '/campaigns', icon: Megaphone, label: 'Manage campaigns' },
+                { href: '/landing-pages', icon: Globe, label: 'Manage landing pages' },
                 { href: '/branding', icon: BarChart3, label: 'Update branding' },
                 { href: '/applications', icon: Users, label: 'View applications' },
               ].map(item => (
@@ -144,16 +144,16 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          {campaigns.length > 0 && (
+          {landingPages.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Active Campaigns</CardTitle>
+                <CardTitle className="text-base">Active Landing Pages</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {campaigns.map(c => (
-                  <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
-                    <Megaphone className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm">{c.name}</span>
+                {landingPages.map(lp => (
+                  <div key={lp.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
+                    <Globe className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm">{lp.name}</span>
                     <Badge variant="success" className="ml-auto text-xs">Active</Badge>
                   </div>
                 ))}

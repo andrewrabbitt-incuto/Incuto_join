@@ -63,8 +63,8 @@ async function main() {
     ],
   })
 
-  // Create sample campaigns
-  await prisma.campaign.createMany({
+  // Create sample landing pages
+  await prisma.landingPage.createMany({
     skipDuplicates: true,
     data: [
       {
