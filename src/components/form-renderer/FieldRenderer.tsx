@@ -20,34 +20,57 @@ interface FieldRendererProps {
   onChange: (value: unknown) => void
   error?: string
   formData: Record<string, unknown>
+  /** Results from mid-form triggers (credit search, quotation, etc.) */
+  formContext?: Record<string, unknown>
   branding: { primaryColor: string; borderRadius: string }
 }
 
-// Evaluate show/hide conditions
-export function evaluateConditions(conditions: FieldCondition[] | undefined, formData: Record<string, unknown>): boolean {
+/** Resolve a dot-path like "credit_result.tier" into a nested object value */
+function resolvePath(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((acc, key) => {
+    if (acc !== null && acc !== undefined && typeof acc === 'object') {
+      return (acc as Record<string, unknown>)[key]
+    }
+    return undefined
+  }, obj)
+}
+
+/**
+ * Evaluate show/hide conditions against form field values and/or trigger context.
+ *
+ * Conditions with source='context' (or source omitted and fieldKey contains a dot)
+ * are resolved against formContext using dot-path notation.
+ * All other conditions are resolved against formData.
+ */
+export function evaluateConditions(
+  conditions: FieldCondition[] | undefined,
+  formData: Record<string, unknown>,
+  formContext?: Record<string, unknown>
+): boolean {
   if (!conditions || conditions.length === 0) return true
 
   let result = true
   for (let i = 0; i < conditions.length; i++) {
     const cond = conditions[i]
-    const fieldValue = formData[cond.fieldKey]
+
+    // Determine source: explicit 'context', or implicit (fieldKey contains a dot)
+    const isContext = cond.source === 'context' || (cond.source === undefined && cond.fieldKey.includes('.'))
+    const fieldValue = isContext
+      ? resolvePath(formContext ?? {}, cond.fieldKey)
+      : formData[cond.fieldKey]
+
     let matches = false
-
     switch (cond.operator) {
-      case 'equals': matches = String(fieldValue) === String(cond.value); break
-      case 'not_equals': matches = String(fieldValue) !== String(cond.value); break
-      case 'contains': matches = String(fieldValue).includes(String(cond.value)); break
-      case 'greater_than': matches = Number(fieldValue) > Number(cond.value); break
-      case 'less_than': matches = Number(fieldValue) < Number(cond.value); break
-      case 'is_empty': matches = !fieldValue || String(fieldValue).trim() === ''; break
-      case 'is_not_empty': matches = !!fieldValue && String(fieldValue).trim() !== ''; break
+      case 'equals':        matches = String(fieldValue) === String(cond.value); break
+      case 'not_equals':    matches = String(fieldValue) !== String(cond.value); break
+      case 'contains':      matches = String(fieldValue).includes(String(cond.value)); break
+      case 'greater_than':  matches = Number(fieldValue) > Number(cond.value); break
+      case 'less_than':     matches = Number(fieldValue) < Number(cond.value); break
+      case 'is_empty':      matches = !fieldValue || String(fieldValue).trim() === ''; break
+      case 'is_not_empty':  matches = !!fieldValue && String(fieldValue).trim() !== ''; break
     }
 
-    if (i === 0) {
-      result = matches
-    } else {
-      result = cond.logic === 'OR' ? result || matches : result && matches
-    }
+    result = i === 0 ? matches : (cond.logic === 'OR' ? result || matches : result && matches)
   }
   return result
 }
@@ -91,9 +114,9 @@ function InfoButton({ button }: { button: NonNullable<FormFieldDef['infoButton']
   )
 }
 
-export function FieldRenderer({ field, value, onChange, error, formData, branding }: FieldRendererProps) {
-  // Show/hide based on conditions
-  const visible = evaluateConditions(field.conditions, formData)
+export function FieldRenderer({ field, value, onChange, error, formData, formContext, branding }: FieldRendererProps) {
+  // Show/hide based on conditions (may reference formContext via dot-path)
+  const visible = evaluateConditions(field.conditions, formData, formContext)
   if (!visible) return null
 
   const inputClass = cn(

@@ -252,6 +252,30 @@ export function FieldEditor({ field, allFields, onChange, onClose }: FieldEditor
                     </SelectContent>
                   </Select>
                 )}
+                {/* Source selector: form field vs trigger context */}
+                <Select
+                  value={cond.source ?? 'form'}
+                  onValueChange={v => updateCondition(idx, { source: v as 'form' | 'context', fieldKey: '' })}
+                >
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="form">Form field value</SelectItem>
+                    <SelectItem value="context">Trigger result (credit/quotation)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(cond.source ?? 'form') === 'context' ? (
+                  <div className="space-y-1">
+                    <Input
+                      value={cond.fieldKey}
+                      onChange={e => updateCondition(idx, { fieldKey: e.target.value })}
+                      className="h-7 text-xs font-mono"
+                      placeholder="e.g. credit_result.tier"
+                    />
+                    <p className="text-[10px] text-gray-400">
+                      Dot-path into trigger context — e.g. <code>credit_result.decision</code>, <code>quotation_result.bestRate</code>
+                    </p>
+                  </div>
+                ) : (
                 <Select value={cond.fieldKey} onValueChange={v => updateCondition(idx, { fieldKey: v })}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Select field…" /></SelectTrigger>
                   <SelectContent>
@@ -260,6 +284,7 @@ export function FieldEditor({ field, allFields, onChange, onClose }: FieldEditor
                     ))}
                   </SelectContent>
                 </Select>
+                )}
                 <Select value={cond.operator} onValueChange={v => updateCondition(idx, { operator: v as FieldCondition['operator'] })}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>

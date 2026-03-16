@@ -74,6 +74,48 @@ interface MemberSubmitRequest {
   customFields?: Record<string, unknown>
 }
 
+interface CreditSearchRequest {
+  firstName: string
+  lastName: string
+  dateOfBirth: string
+  address: { line1: string; postcode: string; country?: string }
+  nationalInsurance?: string
+  loanAmount?: number
+}
+
+export interface CreditSearchResult {
+  score: number
+  decision: 'ACCEPT' | 'DECLINE' | 'REFER'
+  /** A = excellent, B = good, C = fair, D = poor */
+  tier: 'A' | 'B' | 'C' | 'D'
+  maxLoanAmount?: number
+  /** IDs of loan products the applicant is eligible for */
+  eligibleProducts?: string[]
+  referenceId: string
+}
+
+interface QuotationRequest {
+  memberId?: string
+  loanAmount: number
+  loanTerm: number
+  loanPurpose?: string
+  creditScore?: number
+}
+
+export interface QuotationResult {
+  offers: {
+    productId: string
+    productName: string
+    rate: number
+    apr: number
+    monthlyPayment: number
+    totalRepayable: number
+  }[]
+  bestRate?: number
+  maxAmount?: number
+  referenceId: string
+}
+
 export class IncutoClient {
   private config: IncutoConfig
 
@@ -108,7 +150,56 @@ export class IncutoClient {
     return response.json()
   }
 
-  private mockResponse<T>(endpoint: string, _body?: unknown): T {
+  private mockResponse<T>(endpoint: string, body?: unknown): T {
+    if (endpoint.includes('/credit-search')) {
+      const amount = (body as Record<string, unknown>)?.loanAmount
+      return {
+        score: 720,
+        decision: 'ACCEPT',
+        tier: 'A',
+        maxLoanAmount: amount ? Math.min(Number(amount) * 1.2, 25000) : 10000,
+        eligibleProducts: ['standard_loan', 'premium_loan'],
+        referenceId: `MOCK-CS-${Date.now()}`,
+      } as T
+    }
+    if (endpoint.includes('/quotation')) {
+      const req = body as Record<string, unknown>
+      const amount = Number(req?.loanAmount || 5000)
+      const term = Number(req?.loanTerm || 36)
+      const monthlyRate = 0.069 / 12
+      const monthly = (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -term))
+      return {
+        offers: [
+          {
+            productId: 'premium_loan',
+            productName: 'Premium Rate Loan',
+            rate: 6.9,
+            apr: 7.1,
+            monthlyPayment: Math.round(monthly * 100) / 100,
+            totalRepayable: Math.round(monthly * term * 100) / 100,
+          },
+          {
+            productId: 'standard_loan',
+            productName: 'Standard Loan',
+            rate: 9.9,
+            apr: 10.3,
+            monthlyPayment: Math.round(monthly * 1.04 * 100) / 100,
+            totalRepayable: Math.round(monthly * 1.04 * term * 100) / 100,
+          },
+        ],
+        bestRate: 6.9,
+        maxAmount: 25000,
+        referenceId: `MOCK-QT-${Date.now()}`,
+      } as T
+    }
+    if (endpoint.includes('/open-banking')) {
+      return {
+        status: 'INITIATED',
+        redirectUrl: '#open-banking-mock',
+        sessionId: `OB-${Date.now()}`,
+        affordability: { monthlyIncome: 2800, monthlyExpenditure: 1600, disposable: 1200, decision: 'PASS' },
+      } as T
+    }
     if (endpoint.includes('/id-check')) {
       return {
         success: true,
@@ -144,6 +235,14 @@ export class IncutoClient {
     message: string
   }> {
     return this.request('/v1/members', 'POST', data)
+  }
+
+  async runCreditSearch(data: CreditSearchRequest): Promise<CreditSearchResult> {
+    return this.request<CreditSearchResult>('/v1/credit-search', 'POST', data)
+  }
+
+  async runQuotation(data: QuotationRequest): Promise<QuotationResult> {
+    return this.request<QuotationResult>('/v1/quotation', 'POST', data)
   }
 
   async getLoanApplicationUrl(memberId: string, loanData: unknown): Promise<{

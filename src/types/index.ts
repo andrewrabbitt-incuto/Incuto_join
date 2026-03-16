@@ -21,10 +21,47 @@ export interface FieldOption {
 
 export interface FieldCondition {
   id: string
+  /** 'form' reads from submitted field values; 'context' reads from trigger results */
+  source?: 'form' | 'context'
+  /**
+   * When source='form': the fieldKey of another form field.
+   * When source='context': a dot-path into formContext, e.g. "credit_result.tier"
+   */
   fieldKey: string
   operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'is_empty' | 'is_not_empty'
   value: string | number | boolean
   logic?: 'AND' | 'OR'
+}
+
+// ─────────────────────────────────────────────────────────────
+// Section Triggers — mid-form API calls
+// Defined on a FormSection; fire when the section completes.
+// Results are stored in formContext under `contextKey`.
+// ─────────────────────────────────────────────────────────────
+
+export type TriggerType = 'CREDIT_SEARCH' | 'QUOTATION' | 'OPEN_BANKING' | 'WEBHOOK'
+
+export interface TriggerFieldMapping {
+  /** Field key in the form (e.g. "first_name") */
+  formFieldKey: string
+  /** Parameter name expected by the API (e.g. "firstName") */
+  apiField: string
+}
+
+export interface SectionTrigger {
+  id: string
+  name: string
+  triggerType: TriggerType
+  /** Key under which the API result is stored in formContext, e.g. "credit_result" */
+  contextKey: string
+  /** Maps form field values to the API request payload */
+  fieldMappings: TriggerFieldMapping[]
+  /** Only SECTION_COMPLETE is supported today */
+  fireOn: 'SECTION_COMPLETE'
+  /** WEBHOOK only: the URL to POST to */
+  endpoint?: string
+  /** Message shown to the applicant while the trigger is running */
+  loadingMessage?: string
 }
 
 export interface InfoButton {
@@ -72,6 +109,8 @@ export interface FormSectionDef {
   infoButton?: InfoButton
   order: number
   conditions?: FieldCondition[]
+  /** Triggers fire after this section is validated and before advancing */
+  triggers?: SectionTrigger[]
   fields: FormFieldDef[]
 }
 

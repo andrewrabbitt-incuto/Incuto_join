@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { FormRenderer } from '@/components/form-renderer/FormRenderer'
-import type { FormDef, FormSectionDef, FormFieldDef, FieldType, FieldWidth, FormBranding } from '@/types'
+import type { FormDef, FormSectionDef, FormFieldDef, FieldType, FieldWidth, FormBranding, SectionTrigger } from '@/types'
 
 interface PageProps {
   params: { slug: string }
@@ -89,6 +89,7 @@ export default async function JoinFormPage({ params, searchParams }: PageProps) 
       infoButton: (s.infoButton as unknown as FormSectionDef['infoButton']) || undefined,
       order: s.order,
       conditions: (s.conditions as unknown as FormSectionDef['conditions']) || undefined,
+      triggers: (s.triggers as unknown as SectionTrigger[]) || undefined,
       fields: s.fields.map(f => ({
         id: f.id,
         sectionId: f.sectionId,

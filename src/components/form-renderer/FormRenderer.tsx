@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import type { FormDef, FormSectionDef, FormBranding } from '@/types'
+import type { FormDef, FormSectionDef, FormBranding, SectionTrigger } from '@/types'
 import { FieldRenderer, evaluateConditions } from './FieldRenderer'
 import { ChatBot } from './ChatBot'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog'
 import {
-  CheckCircle2, Loader2, AlertCircle, ShieldCheck, ChevronRight, ChevronLeft, HelpCircle, Info
+  CheckCircle2, Loader2, AlertCircle, ShieldCheck, ChevronRight, ChevronLeft, HelpCircle, Info, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -21,11 +21,13 @@ interface FormRendererProps {
 }
 
 type IdCheckStatus = 'idle' | 'checking' | 'passed' | 'failed' | 'needs_more_info'
-type JourneyStage = 'form' | 'id_check' | 'id_check_failed' | 'vouchsafe' | 'complete' | 'loan_redirect'
+type JourneyStage = 'form' | 'trigger' | 'id_check' | 'id_check_failed' | 'vouchsafe' | 'complete' | 'loan_redirect'
 
 export function FormRenderer({ form, branding, campaignCode }: FormRendererProps) {
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
+  /** Results from mid-form triggers — used in context-sourced conditions */
+  const [formContext, setFormContext] = useState<Record<string, unknown>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [sessionId] = useState(() => `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`)
   const [applicationId, setApplicationId] = useState<string | null>(null)
@@ -34,9 +36,12 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
   const [submitting, setSubmitting] = useState(false)
   const [loanRedirectUrl, setLoanRedirectUrl] = useState<string | null>(null)
   const [infoModal, setInfoModal] = useState<{ title: string; content: string } | null>(null)
+  /** The trigger currently running, shown on the loading screen */
+  const [activeTrigger, setActiveTrigger] = useState<SectionTrigger | null>(null)
 
+  // Visible sections take both formData and formContext into account
   const visibleSections = form.sections.filter(
-    s => evaluateConditions(s.conditions, formData)
+    s => evaluateConditions(s.conditions, formData, formContext)
   )
   const currentSection = visibleSections[currentSectionIdx]
   const isLastSection = currentSectionIdx === visibleSections.length - 1
@@ -65,11 +70,10 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
     if (errors[fieldKey]) setErrors(prev => { const e = { ...prev }; delete e[fieldKey]; return e })
   }, [errors])
 
-  // Validate current section
   function validateSection(section: FormSectionDef): boolean {
     const newErrors: Record<string, string> = {}
     section.fields
-      .filter(f => evaluateConditions(f.conditions, formData))
+      .filter(f => evaluateConditions(f.conditions, formData, formContext))
       .forEach(field => {
         if (field.required && !formData[field.fieldKey] && formData[field.fieldKey] !== 0) {
           newErrors[field.fieldKey] = field.validation?.message || `${field.label} is required`
@@ -85,6 +89,40 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
     return Object.keys(newErrors).length === 0
   }
 
+  /** Fire all triggers on the current section sequentially, merging results into formContext */
+  async function fireTriggers(section: FormSectionDef): Promise<void> {
+    if (!section.triggers?.length || !applicationId) return
+
+    for (const trigger of section.triggers) {
+      setActiveTrigger(trigger)
+      setStage('trigger')
+      try {
+        const res = await fetch('/api/triggers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            applicationId,
+            triggerType: trigger.triggerType,
+            contextKey: trigger.contextKey,
+            fieldMappings: trigger.fieldMappings,
+            formData,
+            endpoint: trigger.endpoint,
+          }),
+        })
+        const data = await res.json()
+        if (data.result !== null && data.result !== undefined) {
+          setFormContext(prev => ({ ...prev, [trigger.contextKey]: data.result }))
+        }
+      } catch {
+        // Non-blocking — a failed trigger keeps the form moving, context key stays absent
+        console.error(`Trigger "${trigger.name}" failed silently`)
+      }
+    }
+
+    setActiveTrigger(null)
+    setStage('form')
+  }
+
   async function handleNext() {
     if (!currentSection) return
     if (!validateSection(currentSection)) return
@@ -97,6 +135,9 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
         body: JSON.stringify({ currentSectionIndex: currentSectionIdx + 1, formData }),
       }).catch(() => {})
     }
+
+    // Fire this section's triggers before advancing
+    await fireTriggers(currentSection)
 
     if (isLastSection) {
       await handleSubmit()
@@ -112,7 +153,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
   async function handleSubmit() {
     setSubmitting(true)
     try {
-      // Submit application
       const res = await fetch(`/api/applications/${applicationId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,7 +163,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
       if (data.requiresIdCheck) {
         setStage('id_check')
         setIdCheckStatus('checking')
-        // Run ID check
         const idRes = await fetch('/api/incuto/id-check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -133,7 +172,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
 
         if (idData.status === 'PASSED') {
           setIdCheckStatus('passed')
-          // Check if loan redirect needed
           const products = formData.product_selector || formData.products
           if ((products === 'loan' || products === 'both') && form.loanRedirectUrl) {
             setLoanRedirectUrl(form.loanRedirectUrl.replace('{memberId}', data.memberId || ''))
@@ -143,11 +181,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
           }
         } else if (idData.status === 'FAILED') {
           setIdCheckStatus('failed')
-          if (form.requireCommonBond) {
-            setStage('id_check_failed')
-          } else {
-            setStage('id_check_failed')
-          }
+          setStage('id_check_failed')
         } else {
           setIdCheckStatus('needs_more_info')
           setStage('vouchsafe')
@@ -157,6 +191,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
       }
     } catch {
       setErrors({ _submit: 'An error occurred. Please try again.' })
+      setStage('form')
     } finally {
       setSubmitting(false)
     }
@@ -164,6 +199,30 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
 
   const primaryColor = branding.primaryColor || '#2563EB'
   const progress = ((currentSectionIdx + 1) / Math.max(visibleSections.length, 1)) * 100
+
+  // ─── TRIGGER LOADING SCREEN ───
+  if (stage === 'trigger' && activeTrigger) {
+    const messages: Record<string, string> = {
+      CREDIT_SEARCH: 'Running a credit check…',
+      QUOTATION: 'Finding the best rates for you…',
+      OPEN_BANKING: 'Connecting to your bank…',
+      WEBHOOK: 'Checking eligibility…',
+    }
+    return (
+      <FormShell branding={branding} form={form}>
+        <div className="max-w-lg mx-auto text-center py-16 px-6">
+          <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center" style={{ backgroundColor: `${primaryColor}15` }}>
+            <Zap className="w-10 h-10 animate-pulse" style={{ color: primaryColor }} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            {activeTrigger.loadingMessage || messages[activeTrigger.triggerType] || 'Please wait…'}
+          </h2>
+          <p className="text-gray-500 mb-6">This usually takes just a moment. Please don&apos;t close this page.</p>
+          <Loader2 className="w-8 h-8 mx-auto animate-spin text-gray-300" />
+        </div>
+      </FormShell>
+    )
+  }
 
   // ─── COMPLETE SCREEN ───
   if (stage === 'complete') {
@@ -189,7 +248,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
     )
   }
 
-  // ─── LOAN REDIRECT SCREEN ───
+  // ─── LOAN REDIRECT ───
   if (stage === 'loan_redirect') {
     return (
       <FormShell branding={branding} form={form}>
@@ -243,7 +302,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
               <AlertCircle className="w-8 h-8 text-yellow-500" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Additional Verification Needed</h2>
-            <p className="text-gray-500">We need to verify your identity with some additional documents. This is a standard security process.</p>
+            <p className="text-gray-500">We need to verify your identity with some additional documents.</p>
           </div>
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -271,7 +330,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: primaryColor }} />
       </div>
 
-      {/* Section steps indicator */}
+      {/* Step indicators */}
       <div className="flex items-center justify-center gap-2 mb-8">
         {visibleSections.map((s, i) => (
           <div key={s.id} className="flex items-center gap-2">
@@ -281,6 +340,10 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
             )} style={i <= currentSectionIdx ? { backgroundColor: primaryColor, '--tw-ring-color': `${primaryColor}40` } as React.CSSProperties : {}}>
               {i < currentSectionIdx ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
             </div>
+            {/* Show trigger indicator on sections that have triggers */}
+            {s.triggers?.length ? (
+              <Zap className="w-3 h-3 text-amber-400" title="Has eligibility check" />
+            ) : null}
             {i < visibleSections.length - 1 && (
               <div className={cn('w-8 h-0.5', i < currentSectionIdx ? 'bg-green-400' : 'bg-gray-200')} />
             )}
@@ -290,7 +353,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
 
       {currentSection && (
         <>
-          {/* Section header */}
           <div className="mb-6">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-gray-900">{currentSection.title}</h2>
@@ -311,7 +373,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
             )}
           </div>
 
-          {/* Fields */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-5">
             {currentSection.fields.map(field => (
               <FieldRenderer
@@ -321,6 +382,7 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
                 onChange={v => setFieldValue(field.fieldKey, v)}
                 error={errors[field.fieldKey]}
                 formData={formData}
+                formContext={formContext}
                 branding={{ primaryColor, borderRadius: branding.borderRadius }}
               />
             ))}
@@ -333,7 +395,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
             </div>
           )}
 
-          {/* Navigation */}
           <div className="flex items-center justify-between mt-8 pt-6 border-t">
             <Button variant="outline" onClick={handleBack} disabled={currentSectionIdx === 0} className="gap-2">
               <ChevronLeft className="w-4 h-4" /> Back
@@ -349,14 +410,16 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
               ) : isLastSection ? (
                 <>Submit Application <CheckCircle2 className="w-4 h-4" /></>
               ) : (
-                <>Next <ChevronRight className="w-4 h-4" /></>
+                <>
+                  {currentSection.triggers?.length ? 'Check & Continue' : 'Next'}
+                  <ChevronRight className="w-4 h-4" />
+                </>
               )}
             </Button>
           </div>
         </>
       )}
 
-      {/* Info modal */}
       {infoModal && (
         <Dialog open onOpenChange={() => setInfoModal(null)}>
           <DialogContent>
@@ -368,7 +431,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
         </Dialog>
       )}
 
-      {/* Chatbot */}
       {form.chatbotEnabled && form.chatbotConfig && (
         <ChatBot config={form.chatbotConfig} formSlug={form.slug} />
       )}
@@ -379,7 +441,6 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
 function FormShell({ children, branding, form }: { children: React.ReactNode; branding: FormBranding; form: FormDef }) {
   return (
     <div className="min-h-screen bg-gray-50" style={branding.backgroundType === 'gradient' ? { background: branding.backgroundGradient } : { backgroundColor: branding.backgroundColor || '#F9FAFB' }}>
-      {/* Header */}
       <div className="border-b bg-white shadow-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           {branding.logoUrl ? (
@@ -393,19 +454,14 @@ function FormShell({ children, branding, form }: { children: React.ReactNode; br
           </div>
         </div>
       </div>
-
-      {/* Content */}
       <div className="max-w-3xl mx-auto px-6 py-8">
         <div className="bg-white rounded-2xl shadow-sm border p-8">
           {children}
         </div>
       </div>
-
-      {/* Footer */}
       <div className="text-center pb-8">
         <p className="text-xs text-gray-400">{branding.footerText || 'Powered by Incuto Join'}</p>
       </div>
-
       {branding.customCss && <style dangerouslySetInnerHTML={{ __html: branding.customCss }} />}
     </div>
   )

@@ -172,6 +172,10 @@ model FormSection {
   // Show/hide logic for entire section
   conditions  Json? // array of FieldCondition
 
+  // Mid-form API calls that fire when this section completes.
+  // Results are stored in formContext and can be used in conditions.
+  triggers    Json? // array of SectionTrigger
+
   fields FormField[]
 
   createdAt DateTime @default(now())
