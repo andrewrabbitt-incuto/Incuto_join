@@ -222,6 +222,70 @@ export interface CommonBondDef {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Journey Builder Types
+// ─────────────────────────────────────────────────────────────
+
+export type JourneyStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+
+export type StepType = 'START' | 'FORM' | 'ID_CHECK' | 'CREDIT_CHECK' | 'CONDITION' | 'END'
+
+/** Condition evaluated on a journey edge to decide which path to follow */
+export interface JourneyEdgeCondition {
+  /** 'step_result' reads from a processing step's outcome; 'form_data' reads from collected form fields */
+  source: 'step_result' | 'form_data'
+  /** For step_result: e.g. "id_check.status". For form_data: the fieldKey */
+  field: string
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains'
+  value: string | number | boolean
+}
+
+export interface JourneyEdgeDef {
+  [key: string]: unknown
+  id: string
+  sourceStepId: string
+  targetStepId: string
+  /** null means always follow this edge (default/fallback path) */
+  condition?: JourneyEdgeCondition
+  /** Display label shown on the edge, e.g. "Approved", "Rejected" */
+  label?: string
+  /** Lower order = evaluated first when multiple edges leave the same node */
+  order: number
+}
+
+export interface JourneyStepConfig {
+  // END step
+  endType?: 'SUCCESS' | 'REJECTED'
+  message?: string
+  // CREDIT_CHECK / custom processing
+  loadingMessage?: string
+  contextKey?: string
+}
+
+export interface JourneyStepDef {
+  // Index signature required by @xyflow/react Node data constraint
+  [key: string]: unknown
+  id: string
+  type: StepType
+  title: string
+  positionX: number
+  positionY: number
+  formId?: string
+  form?: { id: string; name: string; slug: string }
+  config?: JourneyStepConfig
+}
+
+export interface JourneyDef {
+  id: string
+  tenantId: string
+  name: string
+  description?: string
+  slug: string
+  status: JourneyStatus
+  steps: JourneyStepDef[]
+  edges: JourneyEdgeDef[]
+}
+
+// ─────────────────────────────────────────────────────────────
 // Tenant / Branding
 // ─────────────────────────────────────────────────────────────
 

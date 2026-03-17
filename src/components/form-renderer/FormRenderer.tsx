@@ -18,12 +18,15 @@ interface FormRendererProps {
   form: FormDef
   branding: FormBranding
   campaignCode?: string
+  /** When true, skip Incuto submission / ID check and call onStepComplete instead */
+  journeyMode?: boolean
+  onStepComplete?: (formData: Record<string, unknown>) => void
 }
 
 type IdCheckStatus = 'idle' | 'checking' | 'passed' | 'failed' | 'needs_more_info'
 type JourneyStage = 'form' | 'trigger' | 'id_check' | 'id_check_failed' | 'vouchsafe' | 'complete' | 'loan_redirect'
 
-export function FormRenderer({ form, branding, campaignCode }: FormRendererProps) {
+export function FormRenderer({ form, branding, campaignCode, journeyMode, onStepComplete }: FormRendererProps) {
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
   const [formData, setFormData] = useState<Record<string, unknown>>({})
   /** Results from mid-form triggers — used in context-sourced conditions */
@@ -153,6 +156,17 @@ export function FormRenderer({ form, branding, campaignCode }: FormRendererProps
   async function handleSubmit() {
     setSubmitting(true)
     try {
+      // Journey mode: just save progress and hand data back to the journey runner
+      if (journeyMode) {
+        await fetch(`/api/applications/${applicationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'SUBMITTED', formData }),
+        })
+        onStepComplete?.(formData)
+        return
+      }
+
       const res = await fetch(`/api/applications/${applicationId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

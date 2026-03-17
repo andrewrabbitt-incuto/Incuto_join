@@ -6,7 +6,7 @@ import { signOut, useSession } from 'next-auth/react'
 import {
   LayoutDashboard, FileText, BarChart3,
   Users, Settings, Palette, LogOut,
-  Building2, ChevronRight, Globe
+  Building2, ChevronRight, Globe, GitBranch
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/forms', icon: FileText, label: 'Forms' },
+  { href: '/journeys', icon: GitBranch, label: 'Journeys' },
   { href: '/applications', icon: Users, label: 'Applications' },
   { href: '/landing-pages', icon: Globe, label: 'Landing Pages' },
   { href: '/common-bonds', icon: BarChart3, label: 'Common Bonds' },
