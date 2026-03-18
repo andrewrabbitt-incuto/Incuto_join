@@ -10,6 +10,10 @@ export type FieldType =
   | 'SIGNATURE' | 'ADDRESS_LOOKUP' | 'SORT_CODE' | 'ACCOUNT_NUMBER'
   | 'NATIONAL_INSURANCE' | 'ID_UPLOAD' | 'CONSENT' | 'DECLARATION'
   | 'LOAN_AMOUNT' | 'LOAN_PURPOSE' | 'LOAN_TERM'
+  // Compliance
+  | 'TAX_RESIDENCY'
+  // Widgets
+  | 'LOAN_CALCULATOR' | 'ADDRESS_HISTORY' | 'INCOME_EXPENDITURE'
 
 export type FieldWidth = 'FULL' | 'HALF' | 'THIRD' | 'TWO_THIRDS'
 
@@ -170,7 +174,7 @@ export interface FieldPaletteItem {
   label: string
   icon: string
   description: string
-  category: 'PERSONAL' | 'ADDRESS' | 'FINANCIAL' | 'PRODUCTS' | 'COMPLIANCE' | 'LAYOUT' | 'CUSTOM'
+  category: 'PERSONAL' | 'ADDRESS' | 'FINANCIAL' | 'PRODUCTS' | 'COMPLIANCE' | 'LAYOUT' | 'CUSTOM' | 'WIDGETS'
   defaultLabel: string
   isSystemField?: boolean
 }

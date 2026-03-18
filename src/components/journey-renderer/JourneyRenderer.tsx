@@ -1,9 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CheckCircle2, XCircle, ShieldCheck, Search, Loader2, ChevronRight } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, ChevronRight, BookmarkIcon, MailIcon, SendIcon } from 'lucide-react'
 import { FormRenderer } from '@/components/form-renderer/FormRenderer'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { JourneyDef, JourneyStepDef, JourneyEdgeDef, FormDef, FormBranding } from '@/types'
 
 // ─── Condition evaluation ─────────────────────────────────────────────────────
@@ -87,21 +89,114 @@ function EndScreen({ step, primaryColor }: { step: JourneyStepDef; primaryColor:
   )
 }
 
+// ─── Save & Continue Later dialog ────────────────────────────────────────────
+
+function SaveProgressDialog({
+  journeyId,
+  journeyData,
+  stepResults,
+  currentStepId,
+  onClose,
+  primaryColor,
+}: {
+  journeyId: string
+  journeyData: Record<string, unknown>
+  stepResults: Record<string, unknown>
+  currentStepId: string | null
+  onClose: () => void
+  primaryColor: string
+}) {
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) return
+    setSubmitting(true)
+    setError('')
+    try {
+      const res = await fetch('/api/journey-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ journeyId, email, phone: phone || undefined, currentStepId, journeyData, stepResults }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      setSent(true)
+    } catch {
+      setError('Sorry, we could not save your progress. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        {sent ? (
+          <div className="text-center py-4">
+            <SendIcon className="w-10 h-10 mx-auto mb-3" style={{ color: primaryColor }} />
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Check your inbox</h3>
+            <p className="text-sm text-gray-500">We&apos;ve sent a resume link to <strong>{email}</strong>. You can safely close this window.</p>
+            <Button className="mt-5" onClick={onClose}>Close</Button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                <BookmarkIcon className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800">Save your progress</h3>
+                <p className="text-xs text-gray-500">We&apos;ll email you a secure link to continue where you left off</p>
+              </div>
+            </div>
+            <form onSubmit={handleSend} className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="resume-email" className="text-sm flex items-center gap-1.5">
+                  <MailIcon className="w-3.5 h-3.5" /> Email address *
+                </Label>
+                <Input id="resume-email" type="email" required placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="resume-phone" className="text-sm">Mobile number (optional — for SMS code)</Label>
+                <Input id="resume-phone" type="tel" placeholder="07700 900000" value={phone} onChange={e => setPhone(e.target.value)} />
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <div className="flex gap-2 pt-1">
+                <Button type="submit" disabled={submitting} className="flex-1">
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send resume link'}
+                </Button>
+                <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main JourneyRenderer ─────────────────────────────────────────────────────
 
 interface Props {
-  journey: JourneyDef
+  journey: JourneyDef & { resumable?: boolean }
   /** Forms keyed by step ID — pre-loaded server-side */
   formsByStepId: Record<string, FormDef>
   branding: FormBranding
   campaignCode?: string
+  /** Resume token from URL — pre-loads session data */
+  resumeToken?: string
 }
 
-export function JourneyRenderer({ journey, formsByStepId, branding, campaignCode }: Props) {
+export function JourneyRenderer({ journey, formsByStepId, branding, campaignCode, resumeToken }: Props) {
   // Accumulated data from all form steps
   const [journeyData, setJourneyData] = useState<Record<string, unknown>>({})
   // Results from processing steps (id_check, credit_check)
   const [stepResults, setStepResults] = useState<Record<string, unknown>>({})
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
 
   // Find the START node then immediately resolve to the next real step
   const startStep = journey.steps.find(s => s.type === 'START')
@@ -111,6 +206,26 @@ export function JourneyRenderer({ journey, formsByStepId, branding, campaignCode
 
   const [currentStep, setCurrentStep] = useState<JourneyStepDef | null>(firstRealStep)
   const [processing, setProcessing] = useState(false)
+
+  // Load resumed session data on mount if resumeToken provided
+  useEffect(() => {
+    if (!resumeToken) return
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/journey-sessions/${resumeToken}`)
+        if (!res.ok) return
+        const session = await res.json()
+        if (session.journeyData) setJourneyData(session.journeyData as Record<string, unknown>)
+        if (session.stepResults) setStepResults(session.stepResults as Record<string, unknown>)
+        if (session.currentStepId) {
+          const step = journey.steps.find(s => s.id === session.currentStepId)
+          if (step) setCurrentStep(step)
+        }
+      } catch {
+        // silently ignore — start fresh
+      }
+    })()
+  }, [resumeToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const advance = useCallback((
     from: JourneyStepDef,
@@ -194,14 +309,37 @@ export function JourneyRenderer({ journey, formsByStepId, branding, campaignCode
       )
     }
     return (
-      <FormRenderer
-        key={currentStep.id}
-        form={form}
-        branding={branding}
-        campaignCode={campaignCode}
-        journeyMode
-        onStepComplete={onFormStepComplete}
-      />
+      <div className="relative">
+        <FormRenderer
+          key={currentStep.id}
+          form={form}
+          branding={branding}
+          campaignCode={campaignCode}
+          journeyMode
+          onStepComplete={onFormStepComplete}
+        />
+        {journey.resumable && (
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setShowSaveDialog(true)}
+              className="text-sm text-gray-400 hover:text-gray-600 underline"
+            >
+              Save &amp; continue later
+            </button>
+          </div>
+        )}
+        {showSaveDialog && (
+          <SaveProgressDialog
+            journeyId={journey.id}
+            journeyData={journeyData}
+            stepResults={stepResults}
+            currentStepId={currentStep.id}
+            onClose={() => setShowSaveDialog(false)}
+            primaryColor={branding.primaryColor}
+          />
+        )}
+      </div>
     )
   }
 

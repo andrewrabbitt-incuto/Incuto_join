@@ -35,6 +35,12 @@ export const FIELD_PALETTE: FieldPaletteItem[] = [
   // Compliance
   { type: 'CONSENT', label: 'Consent / GDPR', icon: 'ShieldCheck', description: 'Marketing or GDPR consent', category: 'COMPLIANCE', defaultLabel: 'I consent to…' },
   { type: 'DECLARATION', label: 'Declaration', icon: 'FileCheck', description: 'Legal declaration statement', category: 'COMPLIANCE', defaultLabel: 'I declare that…' },
+  { type: 'TAX_RESIDENCY', label: 'Tax Residency', icon: 'Globe2', description: 'CRS tax residency declaration', category: 'COMPLIANCE', defaultLabel: 'Tax Residency Declaration' },
+
+  // Widgets — pre-built compound elements
+  { type: 'LOAN_CALCULATOR', label: 'Loan Calculator', icon: 'Calculator', description: 'Interactive loan slider with monthly payment', category: 'WIDGETS', defaultLabel: 'Loan Calculator' },
+  { type: 'ADDRESS_HISTORY', label: 'Address History', icon: 'History', description: '3-year address history with move dates', category: 'WIDGETS', defaultLabel: 'Address History' },
+  { type: 'INCOME_EXPENDITURE', label: 'Income & Expenditure', icon: 'BarChart2', description: 'Structured I&E form with ONS categories', category: 'WIDGETS', defaultLabel: 'Income & Expenditure' },
 
   // Layout
   { type: 'HEADING', label: 'Heading', icon: 'Heading', description: 'Section heading text', category: 'LAYOUT', defaultLabel: 'Section Heading' },
@@ -48,6 +54,7 @@ export const FIELD_CATEGORIES = [
   { key: 'FINANCIAL', label: 'Financial' },
   { key: 'PRODUCTS', label: 'Products & Eligibility' },
   { key: 'COMPLIANCE', label: 'Compliance' },
+  { key: 'WIDGETS', label: 'Widgets' },
   { key: 'LAYOUT', label: 'Layout' },
 ]
 

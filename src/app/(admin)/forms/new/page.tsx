@@ -11,14 +11,25 @@ import { Switch } from '@/components/ui/switch'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
-import { ArrowLeft, FileText, Loader2 } from 'lucide-react'
+import { ArrowLeft, FileText, Loader2, UserPlus, Calculator, PiggyBank, Baby, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
-import { slugify } from '@/lib/utils'
+import { slugify, cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { FORM_TEMPLATES, type FormTemplate } from '@/lib/form-templates'
+
+const TEMPLATE_ICONS: Record<string, React.ReactNode> = {
+  FileText: <FileText className="w-5 h-5" />,
+  UserPlus: <UserPlus className="w-5 h-5" />,
+  Calculator: <Calculator className="w-5 h-5" />,
+  PiggyBank: <PiggyBank className="w-5 h-5" />,
+  Baby: <Baby className="w-5 h-5" />,
+}
 
 export default function NewFormPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const [step, setStep] = useState<'template' | 'details'>('template')
+  const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: '',
@@ -38,6 +49,20 @@ export default function NewFormPage() {
     setForm(f => ({ ...f, name, slug: slugify(name) }))
   }
 
+  const handleTemplateSelect = (template: FormTemplate) => {
+    setSelectedTemplate(template)
+    setForm(f => ({
+      ...f,
+      formType: template.formType,
+      includesSavings: template.includesSavings,
+      includesLoan: template.includesLoan,
+      allowsCorporate: template.allowsCorporate,
+      allowsChildren: template.allowsChildren,
+      requireCommonBond: template.requireCommonBond,
+    }))
+    setStep('details')
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -45,7 +70,10 @@ export default function NewFormPage() {
       const res = await fetch('/api/forms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          templateId: selectedTemplate?.id ?? 'blank',
+        }),
       })
       if (!res.ok) throw new Error('Failed to create form')
       const data = await res.json()
@@ -58,15 +86,59 @@ export default function NewFormPage() {
     }
   }
 
+  if (step === 'template') {
+    return (
+      <div className="p-8 max-w-4xl">
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/forms">
+            <Button variant="ghost" size="icon"><ArrowLeft className="w-4 h-4" /></Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">New Form</h1>
+            <p className="text-gray-500">Choose a template to get started</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {FORM_TEMPLATES.map(template => (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => handleTemplateSelect(template)}
+              className="text-left p-5 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 text-gray-500 group-hover:text-blue-600 transition-colors">
+                {TEMPLATE_ICONS[template.icon] ?? <FileText className="w-5 h-5" />}
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-1">{template.name}</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">{template.description}</p>
+              <div className="flex flex-wrap gap-1 mt-3">
+                {template.includesSavings && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Savings</span>}
+                {template.includesLoan && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Loan</span>}
+                {template.requireCommonBond && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Common bond</span>}
+                {template.allowsChildren && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Junior</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-8 max-w-3xl">
       <div className="flex items-center gap-4 mb-8">
-        <Link href="/forms">
-          <Button variant="ghost" size="icon"><ArrowLeft className="w-4 h-4" /></Button>
-        </Link>
+        <Button variant="ghost" size="icon" onClick={() => setStep('template')}><ArrowLeft className="w-4 h-4" /></Button>
         <div>
           <h1 className="text-2xl font-bold">New Form</h1>
-          <p className="text-gray-500">Configure your join form</p>
+          <p className="text-gray-500">
+            {selectedTemplate ? (
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                Starting from: <strong>{selectedTemplate.name}</strong>
+              </span>
+            ) : 'Configure your join form'}
+          </p>
         </div>
       </div>
 

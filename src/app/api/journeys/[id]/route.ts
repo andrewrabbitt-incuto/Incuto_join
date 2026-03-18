@@ -38,7 +38,7 @@ export async function PUT(req: Request, { params }: Params) {
   if (!journey) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
-  const { name, description, status, steps, edges } = body
+  const { name, description, status, resumable, steps, edges } = body
 
   // Upsert all steps, then upsert all edges in a transaction
   await prisma.$transaction(async tx => {
@@ -49,6 +49,7 @@ export async function PUT(req: Request, { params }: Params) {
         name: name ?? journey.name,
         description: description ?? journey.description,
         status: status ?? journey.status,
+        resumable: resumable ?? journey.resumable,
         updatedAt: new Date(),
       },
     })

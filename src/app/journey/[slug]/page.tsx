@@ -9,7 +9,7 @@ import type {
 
 interface PageProps {
   params: { slug: string }
-  searchParams: { campaign?: string }
+  searchParams: { campaign?: string; resumeToken?: string }
 }
 
 const formInclude = {
@@ -135,13 +135,14 @@ export default async function JourneyPage({ params, searchParams }: PageProps) {
     }
   }
 
-  const journeyDef: JourneyDef = {
+  const journeyDef: JourneyDef & { resumable?: boolean } = {
     id: journey.id,
     tenantId: journey.tenantId,
     name: journey.name,
     description: journey.description ?? undefined,
     slug: journey.slug,
     status: journey.status as JourneyDef['status'],
+    resumable: journey.resumable,
     steps: journey.steps.map(s => ({
       id: s.id,
       type: s.type as JourneyDef['steps'][number]['type'],
@@ -183,6 +184,7 @@ export default async function JourneyPage({ params, searchParams }: PageProps) {
         formsByStepId={formsByStepId}
         branding={branding}
         campaignCode={searchParams.campaign}
+        resumeToken={searchParams.resumeToken}
       />
     </div>
   )

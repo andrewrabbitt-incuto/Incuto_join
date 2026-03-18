@@ -254,6 +254,12 @@ enum FieldType {
   LOAN_AMOUNT
   LOAN_PURPOSE
   LOAN_TERM
+  // ─ Compliance ─
+  TAX_RESIDENCY         // CRS tax residency declaration
+  // ─ Widgets ─
+  LOAN_CALCULATOR       // Interactive loan slider with monthly payment
+  ADDRESS_HISTORY       // Multi-address history (3-year requirement)
+  INCOME_EXPENDITURE    // Structured I&E form with ONS categories
 }
 
 enum FieldWidth {
@@ -319,12 +325,34 @@ model Journey {
   description String?
   slug        String
   status      JourneyStatus @default(DRAFT)
+  resumable   Boolean       @default(false)
   steps       JourneyStep[]
+  sessions    JourneySession[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@unique([tenantId, slug])
   @@map("journeys")
+}
+
+model JourneySession {
+  id             String    @id @default(cuid())
+  journeyId      String
+  journey        Journey   @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  email          String
+  phone          String?
+  currentStepId  String?
+  journeyData    Json      @default("{}")
+  stepResults    Json      @default("{}")
+  resumeToken    String    @unique
+  tokenExpiresAt DateTime
+  otp            String?
+  otpExpiresAt   DateTime?
+  verifiedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("journey_sessions")
 }
 
 enum JourneyStatus {

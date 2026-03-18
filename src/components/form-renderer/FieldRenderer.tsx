@@ -13,6 +13,10 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { HelpCircle, Search, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TaxResidencyField, type TaxResidencyValue } from './fields/TaxResidencyField'
+import { LoanCalculatorWidget, type LoanCalculatorValue } from './fields/LoanCalculatorWidget'
+import { AddressHistoryWidget, type AddressHistoryValue } from './fields/AddressHistoryWidget'
+import { IncomeExpenditureWidget, type IncomeExpenditureValue } from './fields/IncomeExpenditureWidget'
 
 interface FieldRendererProps {
   field: FormFieldDef
@@ -316,6 +320,54 @@ export function FieldRenderer({ field, value, onChange, error, formData, formCon
           </div>
         )
 
+      case 'TAX_RESIDENCY':
+        return (
+          <TaxResidencyField
+            value={value as TaxResidencyValue | undefined}
+            onChange={v => onChange(v)}
+            primaryColor={branding.primaryColor}
+            error={error}
+            required={field.required}
+          />
+        )
+
+      case 'LOAN_CALCULATOR':
+        return (
+          <LoanCalculatorWidget
+            field={field}
+            value={value as LoanCalculatorValue | undefined}
+            onChange={v => onChange(v)}
+            primaryColor={branding.primaryColor}
+            error={error}
+          />
+        )
+
+      case 'ADDRESS_HISTORY':
+        return (
+          <AddressHistoryWidget
+            value={value as AddressHistoryValue | undefined}
+            onChange={v => onChange(v)}
+            primaryColor={branding.primaryColor}
+            error={error}
+            required={field.required}
+            yearsRequired={
+              field.options?.find(o => o.label === 'yearsRequired')
+                ? parseFloat(field.options.find(o => o.label === 'yearsRequired')!.value)
+                : 3
+            }
+          />
+        )
+
+      case 'INCOME_EXPENDITURE':
+        return (
+          <IncomeExpenditureWidget
+            value={value as IncomeExpenditureValue | undefined}
+            onChange={v => onChange(v)}
+            primaryColor={branding.primaryColor}
+            error={error}
+          />
+        )
+
       case 'SIGNATURE':
         return (
           <div className="border-2 rounded-lg p-4 bg-gray-50 min-h-[100px] flex items-center justify-center text-sm text-gray-400 italic">
@@ -338,6 +390,7 @@ export function FieldRenderer({ field, value, onChange, error, formData, formCon
   }
 
   const isLayout = ['HEADING', 'PARAGRAPH', 'DIVIDER'].includes(field.fieldType)
+  const isWidget = ['TAX_RESIDENCY', 'LOAN_CALCULATOR', 'ADDRESS_HISTORY', 'INCOME_EXPENDITURE'].includes(field.fieldType)
 
   return (
     <div className={cn(
@@ -357,7 +410,7 @@ export function FieldRenderer({ field, value, onChange, error, formData, formCon
 
       {renderInput()}
 
-      {error && (
+      {error && !isWidget && (
         <div className="flex items-center gap-1.5 text-red-600">
           <AlertCircle className="w-3.5 h-3.5" />
           <span className="text-xs">{error}</span>

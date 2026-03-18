@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SYSTEM_FIELDS } from '@/lib/field-palette'
 import { v4 as uuid } from 'uuid'
+import { getTemplate, templateToPrismaInput } from '@/lib/form-templates'
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -22,24 +23,28 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, slug, description, formType, includesSavings, includesLoan, allowsCorporate, allowsChildren, requireCommonBond, chatbotEnabled, loanRedirectUrl } = body
+  const { name, slug, description, formType, includesSavings, includesLoan, allowsCorporate, allowsChildren, requireCommonBond, chatbotEnabled, loanRedirectUrl, templateId } = body
 
-  // Create form with a default personal details section
+  // If a template is selected, use it; otherwise fall back to the default scaffold
+  const template = templateId ? getTemplate(templateId) : null
+
   const form = await prisma.form.create({
     data: {
       tenantId: session.user.tenantId,
       name,
       slug,
       description,
-      formType: formType || 'STANDARD',
-      includesSavings: includesSavings ?? true,
-      includesLoan: includesLoan ?? false,
-      allowsCorporate: allowsCorporate ?? false,
-      allowsChildren: allowsChildren ?? false,
-      requireCommonBond: requireCommonBond ?? true,
+      formType: formType || template?.formType || 'STANDARD',
+      includesSavings: includesSavings ?? template?.includesSavings ?? true,
+      includesLoan: includesLoan ?? template?.includesLoan ?? false,
+      allowsCorporate: allowsCorporate ?? template?.allowsCorporate ?? false,
+      allowsChildren: allowsChildren ?? template?.allowsChildren ?? false,
+      requireCommonBond: requireCommonBond ?? template?.requireCommonBond ?? true,
       chatbotEnabled: chatbotEnabled ?? false,
       loanRedirectUrl: loanRedirectUrl || null,
-      sections: {
+      sections: template
+        ? { create: templateToPrismaInput(template) }
+        : {
         create: [
           {
             title: 'Who are you applying for?',

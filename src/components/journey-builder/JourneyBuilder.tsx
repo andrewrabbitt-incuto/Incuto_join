@@ -20,11 +20,12 @@ import '@xyflow/react/dist/style.css'
 import { nanoid } from 'nanoid'
 import {
   Save, Plus, Play, FileText, ShieldCheck, Search, GitBranch,
-  CheckCircle2, XCircle, Loader2, Globe
+  CheckCircle2, XCircle, Loader2, Globe, RefreshCw
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -238,13 +239,14 @@ function EdgePropertiesPanel({
 // ─── Main JourneyBuilder ─────────────────────────────────────────────────────
 
 interface Props {
-  journey: JourneyDef
+  journey: JourneyDef & { resumable?: boolean }
   availableForms: { id: string; name: string; slug: string }[]
 }
 
 export function JourneyBuilder({ journey, availableForms }: Props) {
   const [journeyName, setJourneyName] = useState(journey.name)
   const [journeyStatus, setJourneyStatus] = useState(journey.status)
+  const [resumable, setResumable] = useState(journey.resumable ?? false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<Date | null>(null)
 
@@ -367,6 +369,7 @@ export function JourneyBuilder({ journey, availableForms }: Props) {
       body: JSON.stringify({
         name: journeyName,
         status: publish ? 'PUBLISHED' : journeyStatus,
+        resumable,
         steps,
         edges: edgesPayload,
       }),
@@ -406,6 +409,26 @@ export function JourneyBuilder({ journey, availableForms }: Props) {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Resumable toggle */}
+        <div className="p-3 border-t border-gray-100">
+          <div className="flex items-start gap-2.5">
+            <Switch
+              checked={resumable}
+              onCheckedChange={setResumable}
+              className="mt-0.5 shrink-0"
+            />
+            <div>
+              <div className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                <RefreshCw className="w-3 h-3" />
+                Allow resume
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5 leading-tight">
+                Members can save progress and return via a magic link
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Legend */}
