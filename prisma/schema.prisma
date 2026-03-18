@@ -45,6 +45,10 @@ model Tenant {
   landingPages LandingPage[]
   applications Application[]
   journeys     Journey[]
+  analyticsEvents AnalyticsEvent[]
+
+  // Custom domain — CUs can point their own domain to this tenant
+  customDomain String? @unique
 
   @@map("tenants")
 }
@@ -132,10 +136,11 @@ model Form {
   requireCommonBond Boolean @default(true)
 
   // Form structure
-  sections     FormSection[]
-  landingPages LandingPageForm[]
-  applications Application[]
-  journeySteps JourneyStep[]
+  sections        FormSection[]
+  landingPages    LandingPageForm[]
+  applications    Application[]
+  journeySteps    JourneyStep[]
+  analyticsEvents AnalyticsEvent[]
 
   publishedAt DateTime?
   createdAt   DateTime   @default(now())
@@ -293,9 +298,19 @@ model LandingPage {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  forms        LandingPageForm[]
-  applications Application[]
+  // Full page content
+  slug          String?
+  published     Boolean       @default(false)
+  pageTitle     String?
+  seoDescription String?
+  ogImageUrl    String?
+  content       Json?         // PageSection[] — hero, features, rates, faq, cta sections
 
+  forms           LandingPageForm[]
+  applications    Application[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@unique([tenantId, slug])
   @@map("campaigns")
 }
 
@@ -308,6 +323,38 @@ model LandingPageForm {
 
   @@unique([landingPageId, formId])
   @@map("campaign_forms")
+}
+
+model AnalyticsEvent {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  // What happened
+  eventType     String   // PAGE_VIEW | FORM_START | FORM_COMPLETE | JOURNEY_START | JOURNEY_COMPLETE
+
+  // What was viewed/interacted with
+  landingPageId String?
+  landingPage   LandingPage? @relation(fields: [landingPageId], references: [id])
+  formId        String?
+  form          Form?    @relation(fields: [formId], references: [id])
+  journeyId     String?
+
+  // Attribution
+  sessionId     String   // random UUID per visitor browser session
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  referrer      String?
+
+  metadata      Json?    // extra context (e.g. step reached, outcome)
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, eventType, createdAt])
+  @@index([tenantId, formId, eventType])
+  @@index([tenantId, journeyId, eventType])
+  @@index([tenantId, landingPageId, eventType])
+  @@map("analytics_events")
 }
 
 // ─────────────────────────────────────────────────────────────

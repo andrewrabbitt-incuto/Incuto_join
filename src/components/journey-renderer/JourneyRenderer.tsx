@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { JourneyDef, JourneyStepDef, JourneyEdgeDef, FormDef, FormBranding } from '@/types'
+import { trackEvent } from '@/lib/analytics'
 
 // ─── Condition evaluation ─────────────────────────────────────────────────────
 
@@ -207,6 +208,11 @@ export function JourneyRenderer({ journey, formsByStepId, branding, campaignCode
   const [currentStep, setCurrentStep] = useState<JourneyStepDef | null>(firstRealStep)
   const [processing, setProcessing] = useState(false)
 
+  // Track journey start
+  useEffect(() => {
+    trackEvent('JOURNEY_START', { journeyId: journey.id })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load resumed session data on mount if resumeToken provided
   useEffect(() => {
     if (!resumeToken) return
@@ -292,6 +298,8 @@ export function JourneyRenderer({ journey, formsByStepId, branding, campaignCode
 
   // END step
   if (currentStep.type === 'END') {
+    const isSuccess = currentStep.config?.endType !== 'REJECTED'
+    if (isSuccess) trackEvent('JOURNEY_COMPLETE', { journeyId: journey.id })
     return <EndScreen step={currentStep} primaryColor={branding.primaryColor} />
   }
 

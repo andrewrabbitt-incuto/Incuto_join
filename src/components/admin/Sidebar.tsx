@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  LayoutDashboard, FileText, BarChart3,
+  LayoutDashboard, FileText, BarChart3, BarChart2,
   Users, Settings, Palette, LogOut,
   Building2, ChevronRight, Globe, GitBranch
 } from 'lucide-react'
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/journeys', icon: GitBranch, label: 'Journeys' },
   { href: '/applications', icon: Users, label: 'Applications' },
   { href: '/landing-pages', icon: Globe, label: 'Landing Pages' },
+  { href: '/analytics', icon: BarChart2, label: 'Analytics' },
   { href: '/common-bonds', icon: BarChart3, label: 'Common Bonds' },
   { href: '/branding', icon: Palette, label: 'Branding' },
   { href: '/settings', icon: Settings, label: 'Settings' },

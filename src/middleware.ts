@@ -5,7 +5,11 @@ import type { NextRequest } from 'next/server'
 // Set BASE_DOMAIN in your environment variables.
 const BASE_DOMAIN = process.env.BASE_DOMAIN || 'cuaccount.com'
 
-export function middleware(request: NextRequest) {
+// Internal paths that should never be intercepted for tenant resolution
+const SKIP_PATHS = ['/api/tenant-by-host', '/api/health', '/_next']
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
   const host = request.headers.get('host') || ''
   // Strip port (useful for local dev / Railway internal routing)
   const hostname = host.split(':')[0]
@@ -18,8 +22,32 @@ export function middleware(request: NextRequest) {
     if (tenantSlug) {
       const requestHeaders = new Headers(request.headers)
       requestHeaders.set('x-tenant-slug', tenantSlug)
-
       return NextResponse.next({ request: { headers: requestHeaders } })
+    }
+  }
+
+  // For custom domains (not our own subdomains), look up which tenant owns this domain.
+  // This allows CUs to CNAME their own domain to our Railway service.
+  const isSkipped = SKIP_PATHS.some(p => pathname.startsWith(p))
+  const isOwnDomain = hostname === BASE_DOMAIN || hostname === 'localhost'
+  if (!isOwnDomain && !isSkipped) {
+    try {
+      const baseUrl = process.env.NEXTAUTH_URL ?? `https://${host}`
+      const lookupRes = await fetch(
+        `${baseUrl}/api/tenant-by-host?host=${encodeURIComponent(hostname)}`,
+        { next: { revalidate: 300 } } // cache for 5 minutes
+      )
+      if (lookupRes.ok) {
+        const { tenantSlug } = await lookupRes.json() as { tenantSlug?: string }
+        if (tenantSlug) {
+          const requestHeaders = new Headers(request.headers)
+          requestHeaders.set('x-tenant-slug', tenantSlug)
+          requestHeaders.set('x-custom-domain', hostname)
+          return NextResponse.next({ request: { headers: requestHeaders } })
+        }
+      }
+    } catch {
+      // Lookup failed — continue without tenant context
     }
   }
 

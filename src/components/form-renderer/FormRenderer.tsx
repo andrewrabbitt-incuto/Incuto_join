@@ -13,6 +13,7 @@ import {
   CheckCircle2, Loader2, AlertCircle, ShieldCheck, ChevronRight, ChevronLeft, HelpCircle, Info, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { trackEvent } from '@/lib/analytics'
 
 interface FormRendererProps {
   form: FormDef
@@ -48,6 +49,11 @@ export function FormRenderer({ form, branding, campaignCode, journeyMode, onStep
   )
   const currentSection = visibleSections[currentSectionIdx]
   const isLastSection = currentSectionIdx === visibleSections.length - 1
+
+  // Track analytics — form start
+  useEffect(() => {
+    trackEvent('FORM_START', { formId: form.id })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track application start
   useEffect(() => {
@@ -163,9 +169,12 @@ export function FormRenderer({ form, branding, campaignCode, journeyMode, onStep
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'SUBMITTED', formData }),
         })
+        trackEvent('FORM_COMPLETE', { formId: form.id })
         onStepComplete?.(formData)
         return
       }
+
+      trackEvent('FORM_COMPLETE', { formId: form.id })
 
       const res = await fetch(`/api/applications/${applicationId}/submit`, {
         method: 'POST',
