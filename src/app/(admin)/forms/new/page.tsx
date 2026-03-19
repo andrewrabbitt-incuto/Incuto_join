@@ -11,18 +11,22 @@ import { Switch } from '@/components/ui/switch'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
-import { ArrowLeft, FileText, Loader2, UserPlus, Calculator, PiggyBank, Baby, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, FileText, Loader2, UserPlus, Calculator, PiggyBank, Baby, CheckCircle2, ArrowRightLeft, Building2, ShieldCheck, BadgeCheck } from 'lucide-react'
 import Link from 'next/link'
 import { slugify, cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { FORM_TEMPLATES, type FormTemplate } from '@/lib/form-templates'
 
 const TEMPLATE_ICONS: Record<string, React.ReactNode> = {
-  FileText: <FileText className="w-5 h-5" />,
-  UserPlus: <UserPlus className="w-5 h-5" />,
-  Calculator: <Calculator className="w-5 h-5" />,
-  PiggyBank: <PiggyBank className="w-5 h-5" />,
-  Baby: <Baby className="w-5 h-5" />,
+  FileText:        <FileText className="w-5 h-5" />,
+  UserPlus:        <UserPlus className="w-5 h-5" />,
+  Calculator:      <Calculator className="w-5 h-5" />,
+  PiggyBank:       <PiggyBank className="w-5 h-5" />,
+  Baby:            <Baby className="w-5 h-5" />,
+  ArrowRightLeft:  <ArrowRightLeft className="w-5 h-5" />,
+  Building2:       <Building2 className="w-5 h-5" />,
+  ShieldCheck:     <ShieldCheck className="w-5 h-5" />,
+  BadgeCheck:      <BadgeCheck className="w-5 h-5" />,
 }
 
 export default function NewFormPage() {
