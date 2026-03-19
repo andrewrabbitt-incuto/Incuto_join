@@ -1,5 +1,7 @@
+import { cache } from 'react'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import type { PageSection } from '@/types/landing-page'
 import { LandingPageRenderer } from '@/components/landing-page/LandingPageRenderer'
@@ -10,7 +12,7 @@ interface PageProps {
   searchParams: { [key: string]: string | undefined }
 }
 
-async function findPage(slug: string) {
+const findPage = cache(async (slug: string) => {
   const headersList = headers()
   const tenantSlug = headersList.get('x-tenant-slug')
 
@@ -27,6 +29,25 @@ async function findPage(slug: string) {
     where: { slug, published: true, isActive: true },
     include: { tenant: true },
   })
+})
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const page = await findPage(params.slug)
+  if (!page) return {}
+
+  const title = page.pageTitle ?? page.name
+  const description = page.seoDescription ?? undefined
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: page.ogImageUrl ? [page.ogImageUrl] : [],
+    },
+    icons: page.tenant.faviconUrl ? { icon: page.tenant.faviconUrl } : undefined,
+  }
 }
 
 export default async function LandingPageRoute({ params, searchParams }: PageProps) {
@@ -46,34 +67,19 @@ export default async function LandingPageRoute({ params, searchParams }: PagePro
     customCss: tenant.customCss || undefined,
   }
 
-  // Build tracking params to append to CTA links
   const utmParams = new URLSearchParams()
   if (page.utmSource) utmParams.set('utm_source', page.utmSource)
   if (page.utmMedium) utmParams.set('utm_medium', page.utmMedium)
   if (page.utmCampaign) utmParams.set('utm_campaign', page.utmCampaign)
   utmParams.set('campaign', page.trackingCode)
 
-  const seoTitle = page.pageTitle ?? page.name
-  const seoDesc = page.seoDescription ?? undefined
-
   return (
-    <>
-      <head>
-        <title>{seoTitle}</title>
-        {seoDesc && <meta name="description" content={seoDesc} />}
-        {page.ogImageUrl && <meta property="og:image" content={page.ogImageUrl} />}
-        <meta property="og:title" content={seoTitle} />
-        {seoDesc && <meta property="og:description" content={seoDesc} />}
-        {tenant.faviconUrl && <link rel="icon" href={tenant.faviconUrl} />}
-      </head>
-
-      <LandingPageRenderer
-        pageId={page.id}
-        sections={sections}
-        branding={branding}
-        tenantName={tenant.name}
-        utmString={utmParams.toString()}
-      />
-    </>
+    <LandingPageRenderer
+      pageId={page.id}
+      sections={sections}
+      branding={branding}
+      tenantName={tenant.name}
+      utmString={utmParams.toString()}
+    />
   )
 }
